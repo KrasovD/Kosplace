@@ -1,13 +1,25 @@
 import requests
 import telebot
 from telebot import types
-import datetime
-import json
+import datetime 
+import logging
+import fastapi
+import uvicorn
 
 
 
+API_TOKEN = '5752599032:AAHFyElmvx36zuqTu3Z70TmxxD0H03yqe7E'
 login = 'kosplace'
 password = 'e0LDx023'
+WEBHOOK_HOST = '90.156.229.64'
+WEBHOOK_PORT = 8443  # 443, 80, 88 or 8443 (port need to be 'open')
+WEBHOOK_LISTEN = '90.156.229.64'  # In some VPS you may need to put here the IP addr
+
+WEBHOOK_SSL_CERT = 'webhook_cert.pem'  # Path to the ssl certificate
+WEBHOOK_SSL_PRIV = 'webhook_pkey.pem'
+
+WEBHOOK_URL_BASE = "https://{}:{}".format(WEBHOOK_HOST, WEBHOOK_PORT)
+WEBHOOK_URL_PATH = "/{}/".format(API_TOKEN)
 
 '''
 1. Выгрузка выручка за день(нал безнал), кол-во чеков и средний чек за день, кол-во нал в кассе, топ за день(3-5), 
@@ -23,7 +35,22 @@ http://test.quickresto.ru/platform/online/api/get?moduleName=warehouse.providers
 
 
 def bot():
-    bot = telebot.TeleBot('5880505887:AAE64lOk3XZsZTGqi1ktgX0PeS6DKbUSies')
+    logger = telebot.logger
+    telebot.logger.setLevel(logging.INFO)
+    bot = telebot.TeleBot(API_TOKEN)
+
+    app = fastapi.FastAPI(docs=None, redoc_url=None)
+
+    @app.post(f'/{API_TOKEN}/')
+    def process_webhook(update: dict):
+        """
+        Process webhook calls
+        """
+        if update:
+            update = telebot.types.Update.de_json(update)
+            bot.process_new_updates([update])
+        else:
+            return
 
     @bot.message_handler(content_types='text')
     def message_reply(message):
@@ -39,7 +66,37 @@ def bot():
         if message.text=="Топ 5 блюд по сумме":
             bot.send_message(message.chat.id, text=top_dish('sum'), reply_markup=markup)
 
-    bot.polling(none_stop=True, interval=0)
+    # Set webhook
+    bot.set_webhook(
+        url=WEBHOOK_URL_BASE + WEBHOOK_URL_PATH,
+        certificate=open(WEBHOOK_SSL_CERT, 'r')
+    )
+
+    uvicorn.run(
+        app,
+        host=WEBHOOK_LISTEN,
+        port=WEBHOOK_PORT,
+        ssl_certfile=WEBHOOK_SSL_CERT,
+        ssl_keyfile=WEBHOOK_SSL_PRIV
+    )
+
+def bot_test():
+    bot = telebot.TeleBot(API_TOKEN)
+    bot.delete_webhook()
+    @bot.message_handler(content_types='text')
+    def message_reply(message):
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        item1 = types.KeyboardButton("Отчет")
+        item2 = types.KeyboardButton("Топ 5 блюд по кол-ву")
+        item3 = types.KeyboardButton("Топ 5 блюд по сумме")
+        markup.add(item1, item2, item3)
+        if message.text=="Отчет":
+            bot.send_message(message.chat.id, text=closed_zreport(), reply_markup=markup, parse_mode='HTML')
+        if message.text=="Топ 5 блюд по кол-ву":
+            bot.send_message(message.chat.id, text=top_dish('count'), reply_markup=markup, parse_mode='HTML')
+        if message.text=="Топ 5 блюд по сумме":
+            bot.send_message(message.chat.id, text=top_dish('sum'), reply_markup=markup, parse_mode='HTML')
+    bot.polling(non_stop=True,interval=0)
 
 
 def load_data():
@@ -141,11 +198,11 @@ def top_dish(info):
     if info == 'sum':
         result = sorted(topPos, key=lambda x: x[3], reverse=True)[:5]
         for i in range(5):
-            text += '{0}. {1}:\n{2} руб, ({3} шт)\n'.format(i+1, result[i][0], round(result[i][3]), round(result[i][2]))
+            text += '<code>{0}. {1}: {2} руб ({3} шт)\n</code>'.format(i+1, result[i][0], round(result[i][3]), round(result[i][2]))
     if info == 'count':
-        result = sorted(topPos, key=lambda x: x[2], reverse=True)[:7]
-        for i in range(7):
-            text += '{0}. {1}:\n{2} руб, ({3} шт)\n'.format(i+1, result[i][0], round(result[i][3]), round(result[i][2]))
+        result = sorted(topPos, key=lambda x: x[2], reverse=True)[:5]
+        for i in range(5):
+            text += '<code>{0}. {1}: {2} руб ({3} шт)\n</code>'.format(i+1, result[i][0], round(result[i][3]), round(result[i][2]))
     return text
 
 
