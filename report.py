@@ -1,11 +1,5 @@
 import requests
-import telebot
-from telebot import types
 import datetime 
-import logging
-import fastapi
-import uvicorn
-
 
 
 API_TOKEN = '5752599032:AAHFyElmvx36zuqTu3Z70TmxxD0H03yqe7E'
@@ -31,72 +25,6 @@ http://test.quickresto.ru/platform/online/api/get?moduleName=warehouse.providers
 '''
 Таблица, дата выгрузки (при смене информации вывождить инфу(кофнтейнер, производитель, дата была\стала))
 '''
-
-
-
-def bot():
-    logger = telebot.logger
-    telebot.logger.setLevel(logging.INFO)
-    bot = telebot.TeleBot(API_TOKEN)
-
-    app = fastapi.FastAPI(docs=None, redoc_url=None)
-
-    @app.post(f'/{API_TOKEN}/')
-    def process_webhook(update: dict):
-        """
-        Process webhook calls
-        """
-        if update:
-            update = telebot.types.Update.de_json(update)
-            bot.process_new_updates([update])
-        else:
-            return
-
-    @bot.message_handler(content_types='text')
-    def message_reply(message):
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        item1 = types.KeyboardButton("Отчет")
-        item2 = types.KeyboardButton("Топ 5 блюд по кол-ву")
-        item3 = types.KeyboardButton("Топ 5 блюд по сумме")
-        markup.add(item1, item2, item3)
-        if message.text=="Отчет":
-            bot.send_message(message.chat.id, text=closed_zreport(), reply_markup=markup, parse_mode='HTML')
-        if message.text=="Топ 5 блюд по кол-ву":
-            bot.send_message(message.chat.id, text=top_dish('count'), reply_markup=markup)
-        if message.text=="Топ 5 блюд по сумме":
-            bot.send_message(message.chat.id, text=top_dish('sum'), reply_markup=markup)
-
-    # Set webhook
-    bot.set_webhook(
-        url=WEBHOOK_URL_BASE + WEBHOOK_URL_PATH,
-        certificate=open(WEBHOOK_SSL_CERT, 'r')
-    )
-
-    uvicorn.run(
-        app,
-        host=WEBHOOK_LISTEN,
-        port=WEBHOOK_PORT,
-        ssl_certfile=WEBHOOK_SSL_CERT,
-        ssl_keyfile=WEBHOOK_SSL_PRIV
-    )
-
-def bot_test():
-    bot = telebot.TeleBot(API_TOKEN)
-    bot.delete_webhook()
-    @bot.message_handler(content_types='text')
-    def message_reply(message):
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        item1 = types.KeyboardButton("Отчет")
-        item2 = types.KeyboardButton("Топ 5 блюд по кол-ву")
-        item3 = types.KeyboardButton("Топ 5 блюд по сумме")
-        markup.add(item1, item2, item3)
-        if message.text=="Отчет":
-            bot.send_message(message.chat.id, text=closed_zreport(), reply_markup=markup, parse_mode='HTML')
-        if message.text=="Топ 5 блюд по кол-ву":
-            bot.send_message(message.chat.id, text=top_dish('count'), reply_markup=markup, parse_mode='HTML')
-        if message.text=="Топ 5 блюд по сумме":
-            bot.send_message(message.chat.id, text=top_dish('sum'), reply_markup=markup, parse_mode='HTML')
-    bot.polling(non_stop=True,interval=0)
 
 
 def load_data():
@@ -229,4 +157,3 @@ def load_encas(id):
 
     return cashIn, cashOut
     
-bot()
