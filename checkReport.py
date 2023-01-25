@@ -5,9 +5,11 @@ import telebot
 import report
 from telebot import types
 import sqlite3
+import keys
+
 logger = telebot.logger
 telebot.logger.setLevel(logging.INFO)
-bot = telebot.TeleBot(report.API_TOKEN)
+bot = telebot.TeleBot(keys.API_TOKEN)
 
 app = fastapi.FastAPI(docs=None, redoc_url=None)
 
@@ -39,7 +41,7 @@ def message_start(message):
     bot.send_message(message.chat.id, text='Привет, %s' %message.from_user.first_name, reply_markup=markup)
     sql_insert(message.chat.id)
 
-@app.post(f'/{report.API_TOKEN}/')
+@app.post(f'/{keys.API_TOKEN}/')
 def process_webhook(update: dict):
     """
     Process webhook calls
@@ -59,12 +61,11 @@ def message_reply(message):
     item2 = types.KeyboardButton("Топ 5 блюд по кол-ву")
     item3 = types.KeyboardButton("Топ 5 блюд по сумме")
     markup.add(item1, item2, item3)
-    print(message)
-    if message.text==r'/start':
-        bot.send_message(message.chat.id, text='Привет', reply_markup=markup)
     if message.text=="Отчет":
-        bot.send_message(message.chat.id, text=report.closed_zreport(), reply_markup=markup, parse_mode='HTML')
-        print(message.chat.id)
+        try:
+            bot.send_message(message.chat.id, text=report.closed_zreport(), reply_markup=markup, parse_mode='HTML')
+        except:
+            bot.send_message(message.chat.id, '0 чеков, попробуйте позже', reply_markup=markup, parse_mode='HTML')
     if message.text=="Топ 5 блюд по кол-ву":
         bot.send_message(message.chat.id, text=report.top_dish('count'), reply_markup=markup, parse_mode='HTML')
     if message.text=="Топ 5 блюд по сумме":

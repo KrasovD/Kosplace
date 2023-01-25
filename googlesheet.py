@@ -3,6 +3,7 @@ from datetime import datetime
 import httplib2
 import apiclient
 from oauth2client.service_account import ServiceAccountCredentials
+import locale
 
 
 # Файл, полученный в Google Developer Console
@@ -42,17 +43,18 @@ def post_values(range:str, values:list):
         }
     ).execute()
 
+locale.setlocale(locale.LC_ALL, '')
 
 def post_to_sheet(date:datetime, card, cash, count, avg, total):
     try:
         range = "'{0}'!{1}".format(date.strftime("%m.%Y"), get_values())
         dt = [
         "{}".format(date.strftime("%d.%m")),
-        "{}".format(cash),
-        "{}".format(card),
+        "{}".format(locale.str(cash)),
+        "{}".format(locale.str(card)),
         "{}".format(count),
-        "{}".format(avg),
-        "{}".format(total)
+        "{}".format(locale.str(avg)),
+        "{}".format(locale.str(total))
         ]
         post_values(range, dt)
     except:
