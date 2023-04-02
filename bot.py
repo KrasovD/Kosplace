@@ -1,27 +1,20 @@
-from aiogram import Dispatcher, Bot, types
-from aiogram.dispatcher.webhook import get_new_configured_app
+from aiogram import Dispatcher, Bot, executor, types
 import logging
 from sqlalchemy import create_engine, insert, select
-import ssl
-from aiohttp import web
 
 import config
 import api
 from model import user_id
 
-WEBHOOK_HOST = '90.156.229.64'  # Domain name or IP addres which your bot is located.
-WEBHOOK_PORT = 443  # Telegram Bot API allows only for usage next ports: 443, 80, 88 or 8443
-WEBHOOK_URL_PATH = '/kosplace_report'  # Part of URL
+# webhook settings
+WEBHOOK_HOST = '90.156.229.64'
+WEBHOOK_PATH = '/'
+WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
 
-WEBHOOK_SSL_CERT = 'YOURPUBLIC.pem' 
-WEBHOOK_SSL_PRIV = 'YOURPRIVATE.pem' 
-
-WEBHOOK_URL = f"https://{WEBHOOK_HOST}:{WEBHOOK_PORT}{WEBHOOK_URL_PATH}"
-
-WEBAPP_HOST = 'localhost'
+# webserver settings
+WEBAPP_HOST = 'localhost'  # or ip
 WEBAPP_PORT = 3001
 
- 
 logging.basicConfig(level=logging.INFO)
 engine = create_engine('sqlite:///kos_report.db')
 bot = Bot(token=config.TOKEN)
@@ -88,25 +81,24 @@ async def call_top_dish(call: types.CallbackQuery):
         await bot.answer_callback_query(call.id)
 
 
-async def on_startup(app):
-    webhook = await bot.get_webhook_info()
-    if webhook.url != WEBHOOK_URL:
-        if not webhook.url:
-            await bot.delete_webhook()
+async def on_startup(dp):
+    await bot.set_webhook(WEBHOOK_URL)
 
-        await bot.set_webhook(WEBHOOK_URL, certificate=open(WEBHOOK_SSL_CERT, 'rb'))
-
-async def on_shutdown(app):
+async def on_shutdown(dp):
+    logging.warning('Shutting down..')
     await bot.delete_webhook()
-
+    await dp.storage.close()
+    await dp.storage.wait_closed()
+    logging.warning('Bye!')
 
 if __name__ == '__main__':
-
-    app = get_new_configured_app(dispatcher=dp, path=WEBHOOK_URL_PATH)
-    app.on_startup.append(on_startup)
-    app.on_shutdown.append(on_shutdown)
-
-    context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-    context.load_cert_chain(WEBHOOK_SSL_CERT, WEBHOOK_SSL_PRIV)
-
-    web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT, ssl_context=context)
+    executor.start_webhook(
+        dispatcher=dp,
+        webhook_path=WEBHOOK_PATH,
+        on_startup=on_startup,
+        on_shutdown=on_shutdown,
+        skip_updates=True,
+        host=WEBAPP_HOST,
+        port=WEBAPP_PORT,
+    )
+    
