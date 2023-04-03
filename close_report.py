@@ -10,7 +10,7 @@ from api import Api, closed_zreport
 bot = telebot.TeleBot(config.TOKEN)
 client = pygsheets.authorize(service_file='creds.json')
 engine = create_engine('sqlite:///kos_report.db')
-sheet = client.open_by_key('1WBlECmsyFzas4SxI3E8H0WYs561SD1Qx64s9VwOEv5s')
+sheet = client.open_by_key('1_Zkm2gAtJl2TeA5r8vtRqF8dYEajmUafRCVo_vTeSIc')
 api = Api()
 
 while True:
