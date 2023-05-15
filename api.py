@@ -50,7 +50,9 @@ class Zreport():
                  ordersCount = None, totalCashIn = None, 
                  totalCashOut = None, productOutgoing = None,
                  shiftNumber = None, status = None,
-                 openedEmployee = None, kkmTerminal = None, **kwargs):
+                 openedEmployee = None, kkmTerminal = None, 
+                 nonFiscalTotalReturnCard = None,
+                 nonFiscalTotalReturnCash = None, **kwargs):
         self.id = id
         try:
             self.open = (datetime.datetime.strptime(opened, '%Y-%m-%dT%H:%M:%S.%fZ') + datetime.timedelta(hours=3))
@@ -59,7 +61,9 @@ class Zreport():
         except:
             self.open = datetime.datetime.now() - datetime.timedelta(days=300)
         self.totalCard = round(totalCard)
+        self.returnCard = round(nonFiscalTotalReturnCard)
         self.totalCash = round(totalCash)
+        self.returnCash = round(nonFiscalTotalReturnCash)
         self.ordersCount = ordersCount
         self.openedEmployee = openedEmployee
         self.totalCashIn = round(totalCashIn)
@@ -68,7 +72,7 @@ class Zreport():
         self.avg_check = self._avg_check()
         self.shiftNumber = shiftNumber
         self.status = status
-        self.total = round(totalCard) + round(totalCash)
+        self.total = self.totalCard + self.totalCash - self.returnCard - self.returnCash
         self.terminal = self._terminal(kkmTerminal)
 
     def __repr__(self) -> str:
@@ -181,11 +185,11 @@ def closed_zreport(z_report: Zreport, z_encas: Encashment = ''):
     z_report.terminal,
     'Время открытия:', ' '* space('hh:mm', 'Время открытия:'), z_report.opened,
     'Время закрытия:', ' '*space('hh:mm', 'Время закрытия:'), z_report.closed,
-    'Наличные:', ' '*space('Наличные:', z_report.totalCash, ' руб'), z_report.totalCash, ' руб',
-    'Карта:', ' '*space('Карта:', z_report.totalCard, ' руб'), z_report.totalCard, ' руб',
+    'Наличные:', ' '*space('Наличные:', z_report.totalCash - z_report.returnCash, ' руб'), z_report.totalCash, ' руб',
+    'Карта:', ' '*space('Карта:', z_report.totalCard - z_report.returnCard, ' руб'), z_report.totalCard, ' руб',
     'Чеков:', ' '*space('Чеков:', z_report.ordersCount), z_report.ordersCount,
     'Средний чек:', ' '*space('Средний чек:', z_report.avg_check, ' руб'),  z_report.avg_check, ' руб',
-    'Итого:', ' '*space('Итого:', z_report.totalCash + z_report.totalCard, ' руб'), z_report.totalCard + z_report.totalCash, ' руб', 
+    'Итого:', ' '*space('Итого:', z_report.total, ' руб'), z_report.total, ' руб', 
     'Внесение:', ' '*space('Внесение:', z_report.totalCashIn, ' руб'), z_report.totalCashIn, ' руб',
     cashIn,
     'Изьятие:', ' '*space('Изьятие:', z_report.totalCashOut, ' руб'), z_report.totalCashOut, ' руб',

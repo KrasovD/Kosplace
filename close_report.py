@@ -80,7 +80,10 @@ while True:
                 with engine.connect() as conn:
                     users = conn.execute(select(user_id.c.user_id)).all()
                 for user in users:
-                    bot.send_message(chat_id=user.user_id, text=closed_zreport(shift, all_encas), parse_mode='HTML')
+                    try:
+                        bot.send_message(chat_id=user.user_id, text=closed_zreport(shift, all_encas), parse_mode='HTML')
+                    except:
+                        pass
 
             if shift.terminal == 'Коменданский 65':
                 send_report(['H2', 'M36'], ['H37', 'J60'])
